@@ -1,0 +1,1 @@
+erl -pa ../../_build/default/lib/teacup/ebin

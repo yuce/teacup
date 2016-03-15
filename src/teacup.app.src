@@ -1,5 +1,5 @@
-{application, 'teacup',
- [{description, "An OTP application"},
+{application, teacup,
+ [{description, "Simple TCP client library for Erlang"},
   {vsn, "0.1.0"},
   {registered, []},
   {mod, {'teacup_app', []}},
@@ -9,8 +9,7 @@
    ]},
   {env,[]},
   {modules, []},
-
-  {contributors, []},
-  {licenses, []},
+  {maintainers, ["Yuce Tekol"]},
+  {licenses, ["MIT"]},
   {links, []}
  ]}.
