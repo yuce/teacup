@@ -32,7 +32,6 @@
 -behaviour(gen_server).
 
 -export([start_link/4,
-         connect/2,
          connect/3,
          disconnect/1,
          send/2]).
@@ -50,6 +49,7 @@
 -type state() :: map().
 -type callback_return() :: {ok, NewState :: map()} |
                            {stop, NewState :: map()} |
+                           {reconnect, Newstate :: map()} |
                            {error, Reason :: term()}.
 
 
@@ -88,8 +88,8 @@
 start_link(Parent, Ref, Handler, Opts) ->
     gen_server:start_link(?MODULE, [Parent, Ref, Handler, Opts], []).
 
-connect(Pid, Host) ->
-    gen_server:cast(Pid, {connect, Host}).
+% connect(Pid, Host) ->
+%     gen_server:cast(Pid, {connect, Host}).
 
 connect(Pid, Host, Port) ->
     gen_server:cast(Pid, {connect, Host, Port}).
@@ -114,11 +114,12 @@ init([Parent, Ref, Handler, Opts]) ->
                                registered@ => false,
                                socket@ => undefined,
                                callbacks@ => OptCallbacks},
-            case check_initial_state(NewState) of
-                ok -> {ok, NewState, 0};
-                Error ->
-                    Error
-            end;
+            % case check_initial_state(NewState) of
+            %     ok -> {ok, NewState, 0};
+            %     Error ->
+            %         Error
+            % end;
+            {ok, NewState, 0};
         {error, _} = Error ->
             Error
     end.
@@ -126,8 +127,8 @@ init([Parent, Ref, Handler, Opts]) ->
 handle_call(_, _From, State) ->
     {stop, not_allowed, State}.
 
-handle_cast(connect, State) ->
-    connect_server(State);
+handle_cast({connect, Host, Port}, State) ->
+    connect_server(Host, Port, State);
 
 handle_cast(disconnect, State) ->
     disconnect_server(State);
@@ -162,13 +163,15 @@ terminate(_Reason, State) ->
 initial_state(State) ->
     ConnectOpts = maps:get(connect, State, #{}),
     NewConnectOpts = maps:merge(default_connect_opts(), ConnectOpts),
-    State#{connect := NewConnectOpts}.
+    State#{connect => NewConnectOpts}.
 
-connect_server(#{callbacks@ := #{teacup@error := TError},
-                                 connect := #{host := Host,
-                                 port := Port,
-                                 timeout := Timeout,
-                                 options := Options}} = State) ->
+connect_server(#{connect := #{host := Host,
+                              port := Port}} = State) ->
+    connect_server(Host, Port, State).
+
+connect_server(Host, Port, #{callbacks@ := #{teacup@error := TError},
+                             connect := #{timeout := Timeout,
+                                          options := Options}} = State) ->
     case gen_tcp:connect(Host, Port, Options, Timeout) of
         {ok, Socket} ->
             NewState = State#{socket@ => Socket},
@@ -193,15 +196,6 @@ send_data(Data, #{socket@ := Socket,
         {error, Reason} ->
             handle_result(TError(Reason, State), State)
     end.
-
-check_initial_state(#{connect := #{host := Host,
-                                   port := Port}})
-        when is_list(Host),
-             is_integer(Port) ->
-    ok;
-
-check_initial_state(_) ->
-    {stop, server_config}.
 
 default_connect_opts() ->
     #{host => undefined,
@@ -231,6 +225,8 @@ handle_tcp_data(Data, #{handler@ := Handler} = State) ->
 handle_tcp_closed(#{callbacks@ := #{teacup@status := TStatus}} = State) ->
     case TStatus(disconnect, State) of
         {ok, NewState} ->
+            {noreply, NewState};
+        {reconnect, NewState} ->
             connect_server(NewState);
         {stop, NewState} ->
             NewState1 = reset_socket(NewState),
@@ -266,7 +262,7 @@ teacup@init(Opts) ->
     {ok, Opts}.
 
 teacup@status(disconnect, State) ->
-    {stop, State};
+    {ok, State};
 
 teacup@status(_, State) ->
     {ok, State}.
