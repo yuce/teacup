@@ -30,18 +30,26 @@
 
 -module(teacup).
 
+-export([new/1,
+         new/2,
+         connect/1,
+         disconnect/1,
+         send/2]).
+
 -define(REF(Ref), {teacup@ref, Ref}).
 
 %% == API
+
+new(Handler) ->
+    new(Handler, #{}).
 
 new(Handler, Opts) ->
     Parent = self(),
     Ref = make_ref(),
     case teacup_server:start_link(Parent, Ref, Handler, Opts) of
         {ok, Pid} ->
-            {ok, Pid},
             teacup_registry:update(Ref, Pid),
-            ?REF(Ref);
+            {ok, ?REF(Ref)};
         Other ->
             Other
     end.
