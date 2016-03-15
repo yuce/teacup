@@ -2,7 +2,7 @@
  [{description, "Simple TCP client library for Erlang"},
   {vsn, "0.1.0"},
   {registered, []},
-  {mod, {'teacup_app', []}},
+  {mod, {teacup_app, []}},
   {applications,
    [kernel,
     stdlib
@@ -11,5 +11,5 @@
   {modules, []},
   {maintainers, ["Yuce Tekol"]},
   {licenses, ["MIT"]},
-  {links, []}
+  {links, [{git, "https://github.com/yuce/teacup.git"}]}
  ]}.
