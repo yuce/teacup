@@ -32,6 +32,7 @@
 -behaviour(gen_server).
 
 -export([start_link/4,
+         connect/1,
          connect/3,
          disconnect/1,
          send/2]).
@@ -88,8 +89,8 @@
 start_link(Parent, Ref, Handler, Opts) ->
     gen_server:start_link(?MODULE, [Parent, Ref, Handler, Opts], []).
 
-% connect(Pid, Host) ->
-%     gen_server:cast(Pid, {connect, Host}).
+connect(Pid) ->
+    gen_server:cast(Pid, connect).
 
 connect(Pid, Host, Port) ->
     gen_server:cast(Pid, {connect, Host, Port}).
@@ -126,6 +127,10 @@ init([Parent, Ref, Handler, Opts]) ->
 
 handle_call(_, _From, State) ->
     {stop, not_allowed, State}.
+
+
+handle_cast(connect, State) ->
+    connect_server(State);
 
 handle_cast({connect, Host, Port}, State) ->
     connect_server(Host, Port, State);
@@ -172,13 +177,15 @@ connect_server(#{connect := #{host := Host,
 
 connect_server(Host, Port, #{callbacks@ := #{teacup@error := TError},
                              connect := #{timeout := Timeout,
-                                          options := Options}} = State) ->
+                                          options := Options} = Connect} = State) ->
+    NewConnect = maps:merge(Connect, #{host => Host,
+                                       port => Port}),
+    NewState = State#{connect => NewConnect},
     case gen_tcp:connect(Host, Port, Options, Timeout) of
         {ok, Socket} ->
-            NewState = State#{socket@ => Socket},
-            handle_status(connect, NewState);
+            handle_status(connect, NewState#{socket@ => Socket});
         {error, Reason} ->
-            handle_result(TError(Reason, State), State)
+            handle_result(TError(Reason, State), NewState)
     end.
 
 disconnect_server(#{socket@ := undefined} = State) ->
@@ -203,9 +210,6 @@ default_connect_opts() ->
       port => undefined,
       timeout => 1000,
       options => [binary, {packet, 0}]}.
-
-% default_opts() ->
-%     #{connect => default_connect_opts()}.
 
 opt_callbacks(Handler) ->
     ExportedSet = teacup_utils:exported_functions(Handler),

@@ -32,6 +32,7 @@
 
 -export([new/1,
          new/2,
+         connect/1,
          connect/3,
          disconnect/1,
          send/2]).
@@ -50,6 +51,9 @@ new(Handler, Opts) ->
         {ok, _Pid} -> {ok, ?REF(Ref)};
         Other -> Other
     end.
+
+connect(?REF(Ref)) ->
+    run_ref(fun(P) -> teacup_server:connect(P) end, Ref).
 
 connect(?REF(Ref), Host, Port) ->
     run_ref(fun(P) -> teacup_server:connect(P, Host, Port) end, Ref).
