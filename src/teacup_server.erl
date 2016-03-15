@@ -7,10 +7,15 @@
          disconnect/1,
          send/2]).
 -export([init/1,
+         handle_call/3,
          handle_cast/2,
          handle_info/2,
          code_change/3,
          terminate/2]).
+-export([teacup@init/1,
+         teacup@status/2,
+         teacup@error/2,
+         teacup@message/2]).
 
 -type state() :: map().
 -type callback_return() :: {ok, NewState :: map()} |
@@ -88,6 +93,9 @@ init([Parent, Ref, Handler, Opts]) ->
             Error
     end.
 
+handle_call(_, _From, State) ->
+    {stop, not_allowed, State}.
+
 handle_cast(connect, State) ->
     connect_server(State);
 
@@ -106,7 +114,7 @@ handle_info(timeout, #{registered@ := false,
 handle_info({tcp, Socket, Data}, #{socket@ := Socket} = State) ->
     handle_tcp_data(Data, State);
 
-handle_info({tcp_closed, Socket}, State) ->
+handle_info({tcp_closed, Socket}, #{socket@ := Socket} = State) ->
     handle_tcp_closed(State);
 
 handle_info(Msg, State) ->

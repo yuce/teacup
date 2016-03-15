@@ -1,0 +1,4 @@
+[{<<"simpre">>,
+  {git,"https://github.com/yuce/simpre",
+       {ref,"c8f48772b68f38a64df0a4a6d55b3a9c36891cf0"}},
+  0}].
