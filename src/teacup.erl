@@ -35,7 +35,8 @@
          connect/1,
          connect/3,
          disconnect/1,
-         send/2]).
+         send/2,
+         ref/1]).
 
 -define(REF(Ref), {teacup@ref, Ref}).
 
@@ -63,6 +64,9 @@ disconnect(?REF(Ref)) ->
 
 send(?REF(Ref), What) ->
     run_ref(fun(P) -> teacup_server:send(P, What) end, Ref).
+
+ref(Ref) ->
+    ?REF(Ref).
 
 %% == Internal
 
