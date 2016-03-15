@@ -46,12 +46,9 @@ new(Handler) ->
 new(Handler, Opts) ->
     Parent = self(),
     Ref = make_ref(),
-    case teacup_server:start_link(Parent, Ref, Handler, Opts) of
-        {ok, Pid} ->
-            teacup_registry:update(Ref, Pid),
-            {ok, ?REF(Ref)};
-        Other ->
-            Other
+    case teacup_server_sup:start_child(Parent, Ref, Handler, Opts) of
+        {ok, _Pid} -> {ok, ?REF(Ref)};
+        Other -> Other
     end.
 
 connect(?REF(Ref), Host, Port) ->

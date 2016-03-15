@@ -28,36 +28,35 @@
 % (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 % OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
--module(teacup_sup).
+-module(teacup_server_sup).
 -behaviour(supervisor).
 
--export([start_link/0]).
--export([init/1]).
+-export([start_link/0,
+         start_child/4,
+         stop_child/1]).
+-export([init/1]).         
 
 %% == API
 
 start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
-
+    
+start_child(Parent, Ref, Handler, Opts) ->
+    ChildSpec = #{id => Ref,
+                  start => {teacup_server, start_link, [Parent, Ref, Handler, Opts]},
+                  restart => transient,
+                  shutdown => 1000,
+                  type => worker,
+                  modules => [teacup_server]},
+    supervisor:start_child(?MODULE, ChildSpec).
+    
+stop_child(Pid) ->
+    supervisor:terminate_child(?MODULE, Pid),
+    supervisor:delete_child(?MODULE, Pid),
+    ok.                          
+    
 %% == Callbacks
 
 init([]) ->
-    SupSpec = {{rest_for_one, 10, 60}, [registry_spec(),
-                                        teacup_server_sup_spec()]},
+    SupSpec = {{one_for_one, 10, 60}, []},
     {ok, SupSpec}.
-
-registry_spec() ->
-    #{id => teacup_registry,
-      start => {teacup_registry, start_link, []},
-      restart => permanent,
-      shutdown => 1000,
-      type => worker,
-      modules => [teacup_registry]}.
-
-teacup_server_sup_spec() ->
-    #{id => teacup_server_sup,
-      start => {teacup_server_sup, start_link, []},
-      restart => permanent,
-      shutdown => 1000,
-      type => supervisor,
-      modules => [teacup_server_sup]}.

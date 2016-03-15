@@ -154,8 +154,9 @@ handle_info(Msg, State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-terminate(_Reason, State) ->
+terminate(_Reason, #{ref@ := Ref} = State) ->
     _ = disconnect_server(State),
+    teacup_registry:remove(Ref),
     ok.
 
 %% == Internal
