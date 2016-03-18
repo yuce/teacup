@@ -37,8 +37,8 @@
          disconnect/1,
          send/2,
          ref/1,
-         gen_call/2,
-         gen_cast/2]).
+         call/2,
+         cast/2]).
 -export([pid@/1]).
 
 -define(REF(Ref), {teacup@ref, Ref}).
@@ -71,10 +71,10 @@ send(?REF(Ref), What) ->
 ref(Ref) ->
     ?REF(Ref).
 
-gen_call(?REF(Ref), Msg) ->
+call(?REF(Ref), Msg) ->
     run_ref(fun(P) -> teacup_server:gen_call(P, Msg) end, Ref).
     
-gen_cast(?REF(Ref), Msg) ->
+cast(?REF(Ref), Msg) ->
     run_ref(fun(P) -> teacup_server:gen_cast(P, Msg) end, Ref).
 
 pid@(?REF(Ref)) ->

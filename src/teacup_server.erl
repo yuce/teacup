@@ -36,8 +36,8 @@
          connect/3,
          disconnect/1,
          send/2,
-         gen_call/2,
-         gen_cast/2]).
+         call/2,
+         cast/2]).
 -export([init/1,
          handle_call/3,
          handle_cast/2,
@@ -115,10 +115,10 @@ disconnect(Pid) ->
 send(Pid, Data) ->
     gen_server:cast(Pid, {send, Data}).
     
-gen_call(Pid, Msg) ->
+call(Pid, Msg) ->
     gen_server:call(Pid, Msg).
     
-gen_cast(Pid, Msg) ->
+cast(Pid, Msg) ->
     gen_server:cast(Pid, Msg).
 
 %% == Callbacks
