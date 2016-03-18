@@ -60,16 +60,6 @@
                                {noreply, State :: state()} |
                                {stop, Reason :: term(), State :: state()}.
 
-% -callback teacup@handle({init, Opts :: map()} |
-%                         {data, Data :: iodata()} |
-%                         {message, Message :: term()} |
-%                         {error, Reason :: term()} |
-%                         connect | disconnect, State :: state()) ->
-%     {ok, NewState :: map()}
-%     | {stop, NewState :: map()}
-%     | {error, Reason :: term()}.
-
-
 -callback teacup@init(Opts :: map()) ->
     callback_return().
 
@@ -201,7 +191,7 @@ connect_server(Host, Port, #{callbacks@ := #{teacup@error := TError},
     NewConnect = maps:merge(Connect, #{host => Host,
                                        port => Port}),
     NewState = State#{connect => NewConnect},
-    case gen_tcp:connect(Host, Port, Options, Timeout) of
+    case gen_tcp:connect(binary_to_list(Host), Port, Options, Timeout) of
         {ok, Socket} ->
             handle_status(connect, NewState#{socket@ => Socket});
         {error, Reason} ->
@@ -310,3 +300,33 @@ teacup@cast(_Message, State) ->
 
 teacup@info(_Message, State) ->
     {noreply, State}.
+
+%% == Tests
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+connect_test() ->
+    application:start(teacup),
+    {ok, C} = teacup:new(proxy@tc),
+    teacup:connect(C, <<"httpbin.org">>, 80),
+    receive
+        {proxy@tc, C,{teacup@status,connect}} ->
+            ok;
+        _ ->
+            ?assertEqual(true, false)    
+    after 1000 ->
+        ?assertEqual(true, false)
+    end,
+    teacup:send(C, <<"GET / HTTP/1.0\r\n\r\n">>),
+    receive
+        {proxy@tc, C, _Data} ->
+            ok;
+        _ ->
+            ?assertEqual(true, false)    
+    after 1000 ->
+        ?assertEqual(true, false)
+    end,
+    application:start(teacup).
+
+-endif.

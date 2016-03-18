@@ -72,10 +72,10 @@ ref(Ref) ->
     ?REF(Ref).
 
 call(?REF(Ref), Msg) ->
-    run_ref(fun(P) -> teacup_server:gen_call(P, Msg) end, Ref).
+    run_ref(fun(P) -> teacup_server:call(P, Msg) end, Ref).
     
 cast(?REF(Ref), Msg) ->
-    run_ref(fun(P) -> teacup_server:gen_cast(P, Msg) end, Ref).
+    run_ref(fun(P) -> teacup_server:cast(P, Msg) end, Ref).
 
 pid@(?REF(Ref)) ->
     teacup_registry:pid(Ref).
