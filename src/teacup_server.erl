@@ -312,18 +312,14 @@ connect_test() ->
     teacup:connect(C, <<"httpbin.org">>, 80),
     receive
         {proxy@tc, C,{teacup@status,connect}} ->
-            ok;
-        _ ->
-            ?assertEqual(true, false)    
+            ok
     after 1000 ->
         ?assertEqual(true, false)
     end,
     teacup:send(C, <<"GET / HTTP/1.0\r\n\r\n">>),
     receive
         {proxy@tc, C, _Data} ->
-            ok;
-        _ ->
-            ?assertEqual(true, false)    
+            ok
     after 1000 ->
         ?assertEqual(true, false)
     end,
