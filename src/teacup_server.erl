@@ -311,7 +311,7 @@ connect_test() ->
     {ok, C} = teacup:new(proxy@tc),
     teacup:connect(C, <<"httpbin.org">>, 80),
     receive
-        {proxy@tc, C,{teacup@status,connect}} ->
+        {proxy@tc, C, {teacup@status, connect}} ->
             ok
     after 1000 ->
         ?assertEqual(true, false)
