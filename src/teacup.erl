@@ -44,13 +44,14 @@
 -define(REF(Ref), {teacup@ref, Ref}).
 
 -type teacup_ref() :: {teacup@ref, reference()}.
+-export_type([teacup_ref/0]).
 
 %% == API
 
 new(Handler) ->
     new(Handler, #{}).
 
--spec new(atom(), map()) -> {ok, Ref :: teacup_ref()}.
+-spec new(atom(), map()) -> {ok, teacup_ref()} | {error, term()}.
 new(Handler, Opts) ->
     Parent = self(),
     Ref = make_ref(),
