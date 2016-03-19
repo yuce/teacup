@@ -90,24 +90,33 @@
 
 %% == API
 
+-spec start_link(Parent :: pid(), Ref :: reference(), Handler :: atom(), Opts :: map()) ->
+    {ok, pid()} | ignore | {error, Reason :: term()}.
 start_link(Parent, Ref, Handler, Opts) ->
-    gen_server:start_link(?MODULE, [Parent, Ref, Handler, Opts], [trace]).
+    gen_server:start_link(?MODULE, [Parent, Ref, Handler, Opts], []).
 
+-spec connect(Pid :: pid()) -> ok.
 connect(Pid) ->
     gen_server:cast(Pid, connect).
 
+-spec connect(Pid :: pid(), Host :: binary(), Port :: non_neg_integer()) ->
+    ok.
 connect(Pid, Host, Port) ->
     gen_server:cast(Pid, {connect, Host, Port}).
 
+-spec disconnect(Pid :: pid()) -> ok.
 disconnect(Pid) ->
     gen_server:cast(Pid, disconnect).
 
+-spec send(Pid :: pid(), Data :: iodata()) -> ok.
 send(Pid, Data) ->
     gen_server:cast(Pid, {send, Data}).
-    
+
+-spec call(Pid :: pid(), Msg :: term()) -> term().
 call(Pid, Msg) ->
     gen_server:call(Pid, Msg).
-    
+
+-spec cast(Pid :: pid(), Msg :: term()) -> ok.    
 cast(Pid, Msg) ->
     gen_server:cast(Pid, Msg).
 

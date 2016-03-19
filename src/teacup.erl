@@ -43,11 +43,14 @@
 
 -define(REF(Ref), {teacup@ref, Ref}).
 
+-type teacup_ref() :: {teacup@ref, reference()}.
+
 %% == API
 
 new(Handler) ->
     new(Handler, #{}).
 
+-spec new(atom(), map()) -> {ok, Ref :: teacup_ref()}.
 new(Handler, Opts) ->
     Parent = self(),
     Ref = make_ref(),
@@ -56,27 +59,36 @@ new(Handler, Opts) ->
         Other -> Other
     end.
 
+-spec connect(Ref :: teacup_ref()) -> ok.
 connect(?REF(Ref)) ->
     run_ref(fun(P) -> teacup_server:connect(P) end, Ref).
 
+-spec connect(Ref :: teacup_ref(), Host :: binary(), Port :: integer()) ->
+    ok.
 connect(?REF(Ref), Host, Port) ->
     run_ref(fun(P) -> teacup_server:connect(P, Host, Port) end, Ref).
 
+-spec disconnect(Ref :: teacup_ref()) -> ok.
 disconnect(?REF(Ref)) ->
     run_ref(fun(P) -> teacup_server:disconnect(P) end, Ref).
 
+-spec send(Ref :: teacup_ref(), What :: binary()) -> ok.
 send(?REF(Ref), What) ->
     run_ref(fun(P) -> teacup_server:send(P, What) end, Ref).
 
+-spec ref(Ref :: reference()) -> teacup_ref().
 ref(Ref) ->
     ?REF(Ref).
 
+-spec call(Ref :: teacup_ref(), Msg :: term()) -> term().
 call(?REF(Ref), Msg) ->
     run_ref(fun(P) -> teacup_server:call(P, Msg) end, Ref).
-    
+
+-spec cast(Ref :: teacup_ref(), Msg :: term()) -> ok.    
 cast(?REF(Ref), Msg) ->
     run_ref(fun(P) -> teacup_server:cast(P, Msg) end, Ref).
 
+-spec pid@(Ref :: teacup_ref()) -> {error, not_found} | {ok, pid()}.
 pid@(?REF(Ref)) ->
     teacup_registry:pid(Ref).
 
