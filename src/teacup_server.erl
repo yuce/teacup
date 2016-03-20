@@ -209,7 +209,7 @@ connect_server(Host, Port,
             handle_status(connect, NewState#{socket@ => Socket,
                                              transport_pid@ => TrPid});
         {error, Reason} ->
-            handle_result(TError(Reason, State), NewState)
+            handle_result(TError(Reason, NewState))
     end.
 
 disconnect_server(#{socket@ := undefined} = State) ->
@@ -230,7 +230,7 @@ send_data(Data, #{socket@ := Socket,
         ok ->
             {noreply, State};
         {error, Reason} ->
-            handle_result(TError(Reason, State), State)
+            handle_result(TError(Reason, State))
     end.
 
 default_transport_opts() ->
@@ -255,7 +255,7 @@ opt_callbacks(Handler) ->
     maps:from_list(lists:map(F, Ls)).
 
 handle_tcp_data(Data, #{handler@ := Handler} = State) ->
-    handle_result(Handler:teacup@data(Data, State), State).
+    handle_result(Handler:teacup@data(Data, State)).
 
 handle_tcp_closed(#{callbacks@ := #{teacup@status := TStatus}} = State) ->
     case TStatus(disconnect, State) of
@@ -279,20 +279,20 @@ handle_gen_info(Msg, #{callbacks@ := #{teacup@info := TInfo}} = State) ->
     TInfo(Msg, State).
 
 handle_status(Status, #{callbacks@ := #{teacup@status := TStatus}} = State) ->
-    handle_result(TStatus(Status, State), State).
+    handle_result(TStatus(Status, State)).
 
 reset_transport(State) ->
     State#{socket@ => undefined,
            transport_pid@ => undefined}.
 
-handle_result({ok, NewState}, _State) ->
-    {noreply, NewState};
+handle_result({ok, State}) ->
+    {noreply, State};
 
-handle_result({stop, NewState}, State) ->
+handle_result({stop, State}) ->
     {_, NewState} = disconnect_server(State),
     {stop, normal, NewState};
 
-handle_result({error, Reason}, State) ->
+handle_result({error, Reason, State}) ->
     {_, NewState} = disconnect_server(State),
     {stop, Reason, NewState}.
 
@@ -307,8 +307,8 @@ teacup@status(disconnect, State) ->
 teacup@status(_, State) ->
     {ok, State}.
 
-teacup@error(Reason, _State) ->
-    {error, Reason}.
+teacup@error(Reason, State) ->
+    {error, Reason, State}.
 
 teacup@call(_Message, _From, State) ->
     {stop, not_supported, State}.
