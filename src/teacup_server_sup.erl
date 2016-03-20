@@ -44,7 +44,7 @@ start_link() ->
 start_child(Parent, Ref, Handler, Opts) ->
     ChildSpec = #{id => Ref,
                   start => {teacup_server, start_link, [Parent, Ref, Handler, Opts]},
-                  restart => transient,
+                  restart => temporary,
                   shutdown => 1000,
                   type => worker,
                   modules => [teacup_server]},

@@ -28,31 +28,44 @@
 % (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 % OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
--module(proxy@tc).
--behaviour(teacup_server).
+-module(tcp@teacup).
+-behaviour(teacup_transport).
 
--export([teacup@init/1,
-         teacup@status/2,
-         teacup@data/2,
-         teacup@error/2]).
+-export([connect/4,
+         close/1,
+         send/2,
+         raw_socket/1, 
+         loop/1]).
 
--define(MSG, ?MODULE).
+-define(SOCKET(Socket), {?MODULE, Socket}).
 
-teacup@init(Opts) ->
-    {ok, Opts}.
+%% == Callbacks
 
-teacup@status(Status, State) ->    
-    notify_parent({teacup@status, Status}, State),
-    {ok, State}.
+connect(Host, Port, Opts, undefined) ->
+    connect(Host, Port, Opts, 5000);
+
+connect(Host, Port, Opts, Timeout) ->
+    case gen_tcp:connect(Host, Port, Opts, Timeout) of
+        {ok, Socket} -> {ok, ?SOCKET(Socket)};
+        Other -> Other
+    end.
     
-teacup@data(Data, State) ->
-    notify_parent({teacup@data, Data}, State),
-    {ok, State}.
+close(?SOCKET(Socket)) ->
+    gen_tcp:close(Socket).
     
-teacup@error(Reason, State) ->
-    notify_parent({teacup@error, Reason}, State),
-    {error, Reason}.    
+send(?SOCKET(Socket), Bin) ->
+    gen_tcp:send(Socket, Bin).
     
-notify_parent(Message, #{parent@ := Parent,
-                         ref@ := Ref}) ->
-    Parent ! {Ref, Message}.
+raw_socket(?SOCKET(Socket)) ->
+    Socket.    
+
+loop(Parent) ->
+    receive
+        {tcp, Socket, Data} ->
+            Parent ! {transport_data, ?SOCKET(Socket), Data},
+            loop(Parent);
+        {tcp_closed, Socket} ->
+            Parent ! {transport_closed, ?SOCKET(Socket)};
+        stop ->
+            ok
+    end.

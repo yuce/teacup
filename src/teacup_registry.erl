@@ -35,16 +35,18 @@
          remove/1,
          pid/1]).
 
+-define(REF(Handler, Ref), {teacup@ref, Handler, Ref}).
+
 %% == API
 
 start_link() ->
     simpre:start_link({local, ?MODULE}).
 
-update(Ref, Pid) ->
-    simpre:update({teacup_registry, Ref}, Pid).
+update(?REF(Handler, Ref), Pid) ->
+    simpre:update({teacup_registry, {Handler, Ref}}, Pid).
 
-remove(Ref) ->
-    simpre:remove({teacup_registry, Ref}).
+remove(?REF(Handler, Ref)) ->
+    simpre:remove({teacup_registry, {Handler, Ref}}).
 
-pid(Ref) ->
-    simpre:pid({teacup_registry, Ref}).
+pid(?REF(Handler, Ref)) ->
+    simpre:pid({teacup_registry, {Handler, Ref}}).

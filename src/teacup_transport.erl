@@ -28,31 +28,23 @@
 % (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 % OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
--module(proxy@tc).
--behaviour(teacup_server).
+-module(teacup_transport).
 
--export([teacup@init/1,
-         teacup@status/2,
-         teacup@data/2,
-         teacup@error/2]).
+-type connect_timeout() :: undefined | integer() | infinirty.
 
--define(MSG, ?MODULE).
+-callback connect(Host :: list(),
+                  Port :: non_neg_integer(),
+                  Opts :: list(),
+                  Timeout :: connect_timeout()) ->
+    {ok, Socket :: term()} | {error, Reason :: term()}.
 
-teacup@init(Opts) ->
-    {ok, Opts}.
-
-teacup@status(Status, State) ->    
-    notify_parent({teacup@status, Status}, State),
-    {ok, State}.
+-callback close(Socket :: term()) ->
+    ok | {error, Reason :: term()}.
     
-teacup@data(Data, State) ->
-    notify_parent({teacup@data, Data}, State),
-    {ok, State}.
+-callback send(Socket :: term(), Data :: iolist()) ->
+    ok | {error, Reason :: term()}.
+
+-callback raw_socket(Socket :: term()) -> term().
     
-teacup@error(Reason, State) ->
-    notify_parent({teacup@error, Reason}, State),
-    {error, Reason}.    
-    
-notify_parent(Message, #{parent@ := Parent,
-                         ref@ := Ref}) ->
-    Parent ! {Ref, Message}.
+-callback loop(Parent :: pid()) ->
+    ok.
