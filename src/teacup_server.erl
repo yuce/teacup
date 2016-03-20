@@ -54,7 +54,7 @@
 -type state() :: map().
 -type callback_return() :: {ok, NewState :: state()} |
                            {stop, NewState :: state()} |
-                           {error, Reason :: term()}.
+                           {error, Reason :: term(), State :: state()}.
 -type otp_callback_return() :: {reply, Reply :: term(), State :: state()} |
                                {noreply, State :: state()} |
                                {stop, Reason :: term(), State :: state()}.
@@ -326,7 +326,7 @@ teacup@info(_Message, State) ->
 
 connect_test() ->
     application:start(teacup),
-    {ok, C} = teacup:new(proxy@tc),
+    {ok, C} = teacup:new(proxy@teacup),
     teacup:connect(C, <<"httpbin.org">>, 80),
     receive
         {C, {teacup@status, connect}} -> ok
