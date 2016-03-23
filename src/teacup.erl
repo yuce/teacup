@@ -38,7 +38,7 @@
          send/2,
          call/2,
          cast/2]).
--export([pid@/1]).
+% -export([pid@/1]).
 
 -define(REF(Handler, Ref), {teacup@ref, Handler, Ref}).
 
@@ -53,47 +53,30 @@ new(Handler) ->
 -spec new(atom(), map()) -> {ok, teacup_ref()} | {error, term()}.
 new(Handler, Opts) ->
     Parent = self(),
-    TRef = ?REF(Handler, make_ref()),
-    case teacup_server_sup:start_child(Parent, TRef, Handler, Opts) of
-        {ok, _Pid} -> {ok, TRef};
-        Other -> Other
-    end.
+    % TRef = ?REF(Handler, make_ref()),
+    teacup_server_sup:start_child(Parent, Handler, Opts).
 
 -spec connect(TRef :: teacup_ref()) -> ok.
-connect(TRef) ->
-    run_ref(fun(P) -> teacup_server:connect(P) end, TRef).
+connect(P) ->
+    teacup_server:connect(P).
 
 -spec connect(TRef :: teacup_ref(), Host :: binary(), Port :: integer()) ->
     ok.
-connect(TRef, Host, Port) ->
-    run_ref(fun(P) -> teacup_server:connect(P, Host, Port) end, TRef).
+connect(P, Host, Port) ->
+    teacup_server:connect(P, Host, Port).
 
 -spec disconnect(TRef :: teacup_ref()) -> ok.
-disconnect(TRef) ->
-    run_ref(fun(P) -> teacup_server:disconnect(P) end, TRef).
+disconnect(P) ->
+    teacup_server:disconnect(P).
 
 -spec send(TRef :: teacup_ref(), What :: binary()) -> ok.
-send(TRef, What) ->
-    run_ref(fun(P) -> teacup_server:send(P, What) end, TRef).
+send(P, What) ->
+    teacup_server:send(P, What).
 
 -spec call(TRef :: teacup_ref(), Msg :: term()) -> term().
-call(TRef, Msg) ->
-    run_ref(fun(P) -> teacup_server:call(P, Msg) end, TRef).
+call(P, Msg) ->
+    teacup_server:call(P, Msg).
 
 -spec cast(TRef :: teacup_ref(), Msg :: term()) -> ok.    
-cast(TRef, Msg) ->
-    run_ref(fun(P) -> teacup_server:cast(P, Msg) end, TRef).
-
--spec pid@(TRef :: teacup_ref()) -> {error, not_found} | {ok, pid()}.
-pid@(TRef) ->
-    teacup_registry:pid(TRef).
-
-%% == Internal
-
-run_ref(Fun, TRef) ->
-    case teacup_registry:pid(TRef) of
-        not_found ->
-            {error, not_found};
-        {ok, Pid} ->
-            Fun(Pid)
-    end.
+cast(P, Msg) ->
+    teacup_server:cast(P, Msg).

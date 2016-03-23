@@ -53,6 +53,5 @@ teacup@error(Reason, State) ->
     notify_parent({teacup@error, Reason}, State),
     {error, Reason, State}.    
     
-notify_parent(Message, #{parent@ := Parent,
-                         ref@ := Ref}) ->
-    Parent ! {Ref, Message}.
+notify_parent(Message, #{parent@ := Parent}) ->
+    Parent ! {self(), Message}.

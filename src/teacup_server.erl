@@ -31,7 +31,7 @@
 -module(teacup_server).
 -behaviour(gen_server).
 
--export([start_link/4,
+-export([start_link/3,
          connect/1,
          connect/3,
          disconnect/1,
@@ -89,10 +89,10 @@
 
 %% == API
 
--spec start_link(Parent :: pid(), Ref :: teacup:teacup_ref(), Handler :: atom(), Opts :: map()) ->
+-spec start_link(Parent :: pid(), Handler :: atom(), Opts :: map()) ->
     {ok, pid()} | ignore | {error, Reason :: term()}.
-start_link(Parent, Ref, Handler, Opts) ->
-    gen_server:start_link(?MODULE, [Parent, Ref, Handler, Opts], []).
+start_link(Parent, Handler, Opts) ->
+    gen_server:start_link(?MODULE, [Parent, Handler, Opts], []).
 
 -spec connect(Pid :: pid()) -> ok.
 connect(Pid) ->
@@ -121,14 +121,13 @@ cast(Pid, Msg) ->
 
 %% == Callbacks
 
-init([Parent, Ref, Handler, Opts]) ->
+init([Parent, Handler, Opts]) ->
     OptCallbacks = opt_callbacks(Handler),
     TInit = maps:get(teacup@init, OptCallbacks),
     case TInit(Opts) of
         {ok, State1} ->
             State2 = initial_state(State1),
             NewState = State2#{parent@ => Parent,
-                               ref@ => Ref,
                                handler@ => Handler,
                                registered@ => false,
                                socket@ => undefined,
@@ -157,9 +156,8 @@ handle_cast({send, Data}, State) ->
 handle_cast(Msg, State) ->
     handle_gen_cast(Msg, State).
 
-handle_info(timeout, #{registered@ := false,
-                       ref@ := Ref} = State) ->
-    teacup_registry:update(Ref, self()),
+handle_info(timeout, #{registered@ := false} = State) ->
+    % teacup_registry:update(Ref, self()),
     NewState = State#{registered@ := true},
     {noreply, NewState};
     
@@ -178,9 +176,9 @@ handle_info(Msg, State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-terminate(_Reason, #{ref@ := Ref} = State) ->
+terminate(_Reason, State) ->
     _ = disconnect_server(State),
-    teacup_registry:remove(Ref),
+    % teacup_registry:remove(Ref),
     ok.
 
 %% == Internal

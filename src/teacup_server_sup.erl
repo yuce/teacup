@@ -32,7 +32,7 @@
 -behaviour(supervisor).
 
 -export([start_link/0,
-         start_child/4,
+         start_child/3,
          stop_child/1]).
 -export([init/1]).         
 
@@ -41,9 +41,10 @@
 start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
     
-start_child(Parent, Ref, Handler, Opts) ->
+start_child(Parent, Handler, Opts) ->
+    Ref = make_ref(),
     ChildSpec = #{id => Ref,
-                  start => {teacup_server, start_link, [Parent, Ref, Handler, Opts]},
+                  start => {teacup_server, start_link, [Parent, Handler, Opts]},
                   restart => temporary,
                   shutdown => 1000,
                   type => worker,
