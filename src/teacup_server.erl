@@ -273,10 +273,10 @@ teacup@init(Opts) ->
     {ok, Opts}.
 
 teacup@status(disconnect, State) ->
-    {ok, State};
+    {stop, normal, State};
 
 teacup@status(_, State) ->
-    {ok, State}.
+    {noreply, State}.
 
 teacup@error(Reason, State) ->
     {error, Reason, State}.
