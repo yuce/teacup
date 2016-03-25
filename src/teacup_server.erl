@@ -167,7 +167,7 @@ handle_info(timeout, #{registered@ := false,
 handle_info(timeout, #{registered@ := true} = State) ->
     handle_gen_info(timeout, State);
 
-handle_info({tcp_data, Socket, Data}, #{socket@ := Socket} = State) ->
+handle_info({tcp, Socket, Data}, #{socket@ := Socket} = State) ->
     handle_tcp_data(Data, State);
 
 handle_info({tcp_closed, Socket}, #{socket@ := Socket} = State) ->
@@ -217,7 +217,8 @@ disconnect_server(Force, #{socket@ := Socket} = State) ->
     handle_status({disconnect, Force}, State#{socket@ => undefined}).
 
 send_data(Data, #{socket@ := Socket,
-                  callbacks@ := #{teacup@error := TError}} = State) ->
+                  callbacks@ := #{teacup@error := TError}} = State)
+        when Socket /= undefined ->
     case gen_tcp:send(Socket, Data) of
         ok ->
             {noreply, State};
@@ -226,7 +227,10 @@ send_data(Data, #{socket@ := Socket,
         {error, Reason} ->
             disconnect_server(false, State),
             TError(Reason, State)
-    end.
+    end;
+
+send_data(_, #{callbacks@ := #{teacup@error := TError}} = State) ->
+    TError(no_socket, State).
 
 default_transport_opts() ->
     #{handler => gen_tcp,
@@ -272,7 +276,7 @@ handle_status(Status, #{callbacks@ := #{teacup@status := TStatus}} = State) ->
 teacup@init(Opts) ->
     {ok, Opts}.
 
-teacup@status(disconnect, State) ->
+teacup@status({disconnect, _}, State) ->
     {stop, normal, State};
 
 teacup@status(_, State) ->
