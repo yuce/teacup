@@ -41,18 +41,18 @@
 teacup@init(Opts) ->
     {ok, Opts}.
 
-teacup@status(Status, State) ->    
+teacup@status(Status, State) ->
     notify_parent({teacup@status, Status}, State),
-    {ok, State}.
-    
+    {noreply, State}.
+
 teacup@data(Data, State) ->
     notify_parent({teacup@data, Data}, State),
-    {ok, State}.
-    
+    {noreply, State}.
+
 teacup@error(Reason, State) ->
     notify_parent({teacup@error, Reason}, State),
-    {error, Reason, State}.    
-    
+    {error, Reason, State}.
+
 notify_parent(Message, #{parent@ := Parent,
                          ref@ := Ref}) ->
     Parent ! {Ref, Message}.
