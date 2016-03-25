@@ -52,24 +52,26 @@
          teacup@info/2]).
 
 -type state() :: map().
+
 -type callback_return() :: {ok, NewState :: state()} |
                            {stop, NewState :: state()} |
                            {error, Reason :: term(), State :: state()}.
+
 -type otp_callback_return() :: {reply, Reply :: term(), State :: state()} |
                                {noreply, State :: state()} |
                                {stop, Reason :: term(), State :: state()}.
 
 -callback teacup@data(Data :: iodata(), State :: state()) ->
-    callback_return().
+    otp_callback_return().
 
 -callback teacup@init(Opts :: map()) ->
     callback_return().
 
 -callback teacup@status(Status :: atom(), State :: state()) ->
-    callback_return().
+    otp_callback_return().
 
 -callback teacup@error(Reason :: term(), State :: state()) ->
-    callback_return().
+    otp_callback_return().
 
 -callback teacup@call(Message :: term(), _From :: pid(), State :: state()) ->
     otp_callback_return().
@@ -115,7 +117,7 @@ send(Pid, Data) ->
 call(Pid, Msg) ->
     gen_server:call(Pid, Msg).
 
--spec cast(Pid :: pid(), Msg :: term()) -> ok.    
+-spec cast(Pid :: pid(), Msg :: term()) -> ok.
 cast(Pid, Msg) ->
     gen_server:cast(Pid, Msg).
 
@@ -132,8 +134,7 @@ init([Parent, Ref, Handler, Opts]) ->
                                handler@ => Handler,
                                registered@ => false,
                                socket@ => undefined,
-                               callbacks@ => OptCallbacks,
-                               transport_pid@ => undefined},
+                               callbacks@ => OptCallbacks},
             {ok, NewState, 0};
         {error, _} = Error ->
             Error
@@ -149,11 +150,11 @@ handle_cast({connect, Host, Port}, State) ->
     connect_server(Host, Port, State);
 
 handle_cast(disconnect, State) ->
-    disconnect_server(State);
+    disconnect_server(true, State);
 
 handle_cast({send, Data}, State) ->
     send_data(Data, State);
-    
+
 handle_cast(Msg, State) ->
     handle_gen_cast(Msg, State).
 
@@ -162,14 +163,14 @@ handle_info(timeout, #{registered@ := false,
     teacup_registry:update(Ref, self()),
     NewState = State#{registered@ := true},
     {noreply, NewState};
-    
+
 handle_info(timeout, #{registered@ := true} = State) ->
     handle_gen_info(timeout, State);
 
-handle_info({transport_data, Socket, Data}, #{socket@ := Socket} = State) ->
+handle_info({tcp, Socket, Data}, #{socket@ := Socket} = State) ->
     handle_tcp_data(Data, State);
 
-handle_info({transport_closed, Socket}, #{socket@ := Socket} = State) ->
+handle_info({tcp_closed, Socket}, #{socket@ := Socket} = State) ->
     handle_tcp_closed(State);
 
 handle_info(Msg, State) ->
@@ -179,7 +180,7 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 terminate(_Reason, #{ref@ := Ref} = State) ->
-    _ = disconnect_server(State),
+    disconnect_server(true, State),
     teacup_registry:remove(Ref),
     ok.
 
@@ -191,50 +192,48 @@ initial_state(State) ->
     State#{transport => NewTransportOpts}.
 
 connect_server(#{transport := #{host := Host,
-                              port := Port}} = State) ->
+                                port := Port}} = State) ->
     connect_server(Host, Port, State).
 
 connect_server(Host, Port,
                #{callbacks@ := #{teacup@error := TError},
-                 transport := #{handler := TrHandler,
-                                timeout := Timeout,
+                 transport := #{timeout := Timeout,
                                 options := Options} = Transport} = State) ->
     NewTransport = maps:merge(Transport, #{host => Host,
-                                       port => Port}),
+                                           port => Port}),
     NewState = State#{transport => NewTransport},
-    TrPid = spawn_link(TrHandler, loop, [self()]),
-    case TrHandler:connect(binary_to_list(Host), Port, Options, Timeout) of
+    case gen_tcp:connect(binary_to_list(Host), Port, Options, Timeout) of
         {ok, Socket} ->
-            gen_tcp:controlling_process(TrHandler:raw_socket(Socket), TrPid),
-            handle_status(connect, NewState#{socket@ => Socket,
-                                             transport_pid@ => TrPid});
+            handle_status(connect, NewState#{socket@ => Socket});
         {error, Reason} ->
-            handle_result(TError(Reason, NewState))
+            TError(Reason, NewState)
     end.
 
-disconnect_server(#{socket@ := undefined} = State) ->
+disconnect_server(_Force, #{socket@ := undefined} = State) ->
     {noreply, State};
 
-disconnect_server(#{socket@ := Socket,
-                    transport := #{handler := TrHandler},
-                    transport_pid@ := TrPid} = State) ->
-    TrHandler:close(Socket),
-    TrPid ! stop,
-    NewState = reset_transport(State),
-    {noreply, NewState}.
+disconnect_server(Force, #{socket@ := Socket} = State) ->
+    gen_tcp:close(Socket),
+    handle_status({disconnect, Force}, State#{socket@ => undefined}).
 
 send_data(Data, #{socket@ := Socket,
-                  callbacks@ := #{teacup@error := TError},
-                  transport := #{handler := TrHandler}} = State) ->
-    case TrHandler:send(Socket, Data) of
+                  callbacks@ := #{teacup@error := TError}} = State)
+        when Socket /= undefined ->
+    case gen_tcp:send(Socket, Data) of
         ok ->
             {noreply, State};
+        {error, closed} ->
+            disconnect_server(false, State);
         {error, Reason} ->
-            handle_result(TError(Reason, State))
-    end.
+            disconnect_server(false, State),
+            TError(Reason, State)
+    end;
+
+send_data(_, #{callbacks@ := #{teacup@error := TError}} = State) ->
+    TError(no_socket, State).
 
 default_transport_opts() ->
-    #{handler => tcp@teacup,
+    #{handler => gen_tcp,
       host => undefined,
       port => undefined,
       timeout => 1000,
@@ -255,19 +254,10 @@ opt_callbacks(Handler) ->
     maps:from_list(lists:map(F, Ls)).
 
 handle_tcp_data(Data, #{handler@ := Handler} = State) ->
-    handle_result(Handler:teacup@data(Data, State)).
+    Handler:teacup@data(Data, State).
 
-handle_tcp_closed(#{callbacks@ := #{teacup@status := TStatus}} = State) ->
-    case TStatus(disconnect, State) of
-        {ok, NewState} ->
-            {noreply, NewState};
-        {stop, NewState} ->
-            NewState1 = reset_transport(NewState),
-            {stop, normal, NewState1};
-        {error, Reason} ->
-            NewState = reset_transport(State),
-            {stop, Reason, NewState}
-    end.
+handle_tcp_closed(State) ->
+    disconnect_server(false, State).
 
 handle_gen_call(Msg, From, #{callbacks@ := #{teacup@call := TCall}} = State) ->
     TCall(Msg, From, State).
@@ -279,40 +269,25 @@ handle_gen_info(Msg, #{callbacks@ := #{teacup@info := TInfo}} = State) ->
     TInfo(Msg, State).
 
 handle_status(Status, #{callbacks@ := #{teacup@status := TStatus}} = State) ->
-    handle_result(TStatus(Status, State)).
-
-reset_transport(State) ->
-    State#{socket@ => undefined,
-           transport_pid@ => undefined}.
-
-handle_result({ok, State}) ->
-    {noreply, State};
-
-handle_result({stop, State}) ->
-    {_, NewState} = disconnect_server(State),
-    {stop, normal, NewState};
-
-handle_result({error, Reason, State}) ->
-    {_, NewState} = disconnect_server(State),
-    {stop, Reason, NewState}.
+    TStatus(Status, State).
 
 %% == Defaults for optional callbacks
 
 teacup@init(Opts) ->
     {ok, Opts}.
 
-teacup@status(disconnect, State) ->
-    {ok, State};
+teacup@status({disconnect, _}, State) ->
+    {stop, normal, State};
 
 teacup@status(_, State) ->
-    {ok, State}.
+    {noreply, State}.
 
 teacup@error(Reason, State) ->
     {error, Reason, State}.
 
 teacup@call(_Message, _From, State) ->
     {stop, not_supported, State}.
-    
+
 teacup@cast(_Message, State) ->
     {stop, not_supported, State}.
 
