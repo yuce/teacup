@@ -36,6 +36,7 @@
          connect/3,
          disconnect/1,
          send/2,
+         give/2,
          call/2,
          cast/2]).
 -export([init/1,
@@ -113,6 +114,10 @@ disconnect(Pid) ->
 send(Pid, Data) ->
     gen_server:cast(Pid, {send, Data}).
 
+-spec give(Pid :: pid(), NewParent :: pid()) -> ok.
+give(Pid, NewParent) ->
+    gen_server:call(Pid, {give, NewParent}).
+
 -spec call(Pid :: pid(), Msg :: term()) -> term().
 call(Pid, Msg) ->
     gen_server:call(Pid, Msg).
@@ -132,13 +137,16 @@ init([Parent, Ref, Handler, Opts]) ->
             NewState = State2#{parent@ => Parent,
                                ref@ => Ref,
                                handler@ => Handler,
-                               registered@ => false,
                                socket@ => undefined,
                                callbacks@ => OptCallbacks},
-            {ok, NewState, 0};
+            teacup_registry:update(Ref, self()),
+            {ok, NewState};
         {error, _} = Error ->
             Error
     end.
+
+handle_call({give, NewParent}, _From, State) ->
+    {reply, ok, State#{parent@ => NewParent}};
 
 handle_call(Msg, From, State) ->
     handle_gen_call(Msg, From, State).
@@ -158,13 +166,7 @@ handle_cast({send, Data}, State) ->
 handle_cast(Msg, State) ->
     handle_gen_cast(Msg, State).
 
-handle_info(timeout, #{registered@ := false,
-                       ref@ := Ref} = State) ->
-    teacup_registry:update(Ref, self()),
-    NewState = State#{registered@ := true},
-    {noreply, NewState};
-
-handle_info(timeout, #{registered@ := true} = State) ->
+handle_info(timeout, State) ->
     handle_gen_info(timeout, State);
 
 handle_info({tcp, Socket, Data}, #{socket@ := Socket} = State) ->
