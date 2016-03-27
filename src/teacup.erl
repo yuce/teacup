@@ -36,6 +36,7 @@
          connect/3,
          disconnect/1,
          send/2,
+         give/2,
          call/2,
          cast/2]).
 -export([pid@/1]).
@@ -75,6 +76,10 @@ disconnect(TRef) ->
 -spec send(TRef :: teacup_ref(), What :: binary()) -> ok.
 send(TRef, What) ->
     run_ref(fun(P) -> teacup_server:send(P, What) end, TRef).
+
+-spec give(TRef :: teacup_ref(), NewParent :: pid()) -> ok.
+give(TRef, NewParent) ->
+    run_ref(fun(P) -> teacup_server:give(P, NewParent) end, TRef).
 
 -spec call(TRef :: teacup_ref(), Msg :: term()) -> term().
 call(TRef, Msg) ->
