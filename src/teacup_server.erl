@@ -173,6 +173,22 @@ handle_info({tcp, Socket, Data}, #{socket@ := Socket} = State) ->
 handle_info({tcp_closed, Socket}, #{socket@ := Socket} = State) ->
     handle_tcp_closed(State);
 
+handle_info({tcp_error, Socket, Reason},
+            #{socket@ := Socket,
+              callbacks@ := #{teacup@error := TError}} = State) ->
+    TError(Reason, State);
+
+handle_info({ssl, Socket, Data}, #{socket@ := Socket} = State) ->
+    handle_tcp_data(Data, State);
+
+handle_info({ssl_closed, Socket}, #{socket@ := Socket} = State) ->
+    handle_tcp_closed(State);
+
+handle_info({ssl_error, Socket, Reason},
+            #{socket@ := Socket,
+              callbacks@ := #{teacup@error := TError}} = State) ->
+    TError(Reason, State);
+
 handle_info(Msg, State) ->
     handle_gen_info(Msg, State).
 
@@ -202,7 +218,8 @@ connect_server(Host, Port,
     NewTransport = maps:merge(Transport, #{host => Host,
                                            port => Port}),
     NewState = State#{transport => NewTransport},
-    case gen_tcp:connect(binary_to_list(Host), Port, Options, Timeout) of
+    StrHost = binary_to_list(Host),
+    case transport_connect(StrHost, Port, Options, Timeout, State) of
         {ok, Socket} ->
             handle_status(connect, NewState#{socket@ => Socket});
         {error, Reason} ->
@@ -212,14 +229,14 @@ connect_server(Host, Port,
 disconnect_server(_Force, #{socket@ := undefined} = State) ->
     {noreply, State};
 
-disconnect_server(Force, #{socket@ := Socket} = State) ->
-    gen_tcp:close(Socket),
+disconnect_server(Force, State) ->
+    transport_close(State),
     handle_status({disconnect, Force}, State#{socket@ => undefined}).
 
 send_data(Data, #{socket@ := Socket,
                   callbacks@ := #{teacup@error := TError}} = State)
         when Socket /= undefined ->
-    case gen_tcp:send(Socket, Data) of
+    case transport_send(Data, State) of
         ok ->
             {noreply, State};
         {error, closed} ->
@@ -233,11 +250,11 @@ send_data(_, #{callbacks@ := #{teacup@error := TError}} = State) ->
     TError(no_socket, State).
 
 default_transport_opts() ->
-    #{handler => gen_tcp,
-      host => undefined,
+    #{host => undefined,
       port => undefined,
       timeout => 1000,
-      options => [binary, {packet, 0}]}.
+      options => [binary, {packet, 0}],
+      tls => false}.
 
 opt_callbacks(Handler) ->
     ExportedSet = teacup_utils:exported_functions(Handler),
@@ -270,6 +287,26 @@ handle_gen_info(Msg, #{callbacks@ := #{teacup@info := TInfo}} = State) ->
 
 handle_status(Status, #{callbacks@ := #{teacup@status := TStatus}} = State) ->
     TStatus(Status, State).
+
+transport_connect(Host, Port, Options, Timeout, #{tls := true}) ->
+    ssl:connect(Host, Port, Options, Timeout);
+
+transport_connect(Host, Port, Options, Timeout, _State) ->
+    gen_tcp:connect(Host, Port, Options, Timeout).
+
+transport_close(#{socket@ := Socket,
+                  tls := true}) ->
+    ssl:close(Socket);
+
+transport_close(#{socket@ := Socket}) ->
+    gen_tcp:close(Socket).
+
+transport_send(Data, #{socket@ := Socket,
+                       tls := true}) ->
+    ssl:send(Socket, Data);
+
+transport_send(Data, #{socket@ := Socket}) ->
+    gen_tcp:send(Socket, Data).
 
 %% == Defaults for optional callbacks
 
