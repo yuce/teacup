@@ -64,7 +64,7 @@ new(Handler, Opts) ->
 connect(TRef) ->
     run_ref(fun(P) -> teacup_server:connect(P) end, TRef).
 
--spec connect(TRef :: teacup_ref(), Host :: list(), Port :: integer()) ->
+-spec connect(TRef :: teacup_ref(), Host :: binary(), Port :: integer()) ->
     ok.
 connect(TRef, Host, Port) ->
     run_ref(fun(P) -> teacup_server:connect(P, Host, Port) end, TRef).

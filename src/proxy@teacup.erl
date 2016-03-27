@@ -51,7 +51,7 @@ teacup@data(Data, State) ->
 
 teacup@error(Reason, State) ->
     notify_parent({teacup@error, Reason}, State),
-    {error, Reason, State}.
+    {stop, Reason, State}.
 
 notify_parent(Message, #{parent@ := Parent,
                          ref@ := Ref}) ->

@@ -104,7 +104,7 @@ start_link(Parent, Ref, Handler, Opts) ->
 connect(Pid) ->
     gen_server:cast(Pid, connect).
 
--spec connect(Pid :: pid(), Host :: list(), Port :: non_neg_integer()) ->
+-spec connect(Pid :: pid(), Host :: binary(), Port :: non_neg_integer()) ->
     ok.
 connect(Pid, Host, Port) ->
     gen_server:cast(Pid, {connect, Host, Port}).
@@ -294,10 +294,10 @@ handle_status(Status, #{callbacks@ := #{teacup@status := TStatus}} = State) ->
 
 transport_connect(Host, Port, Options, Timeout,
                   #{transport := #{tls := true}}) ->
-    ssl:connect(Host, Port, Options, Timeout);
+    ssl:connect(binary_to_list(Host), Port, Options, Timeout);
 
 transport_connect(Host, Port, Options, Timeout, _State) ->
-    gen_tcp:connect(Host, Port, Options, Timeout).
+    gen_tcp:connect(binary_to_list(Host), Port, Options, Timeout).
 
 transport_close(#{socket@ := Socket,
                   transport := #{tls := true}}) ->
