@@ -92,7 +92,10 @@
 
 %% == API
 
--spec start_link(Parent :: pid(), Ref :: teacup:teacup_ref(), Handler :: atom(), Opts :: map()) ->
+-spec start_link(Parent :: pid(),
+                 Ref :: teacup:teacup_ref(),
+                 Handler :: atom(),
+                 Opts :: map()) ->
     {ok, pid()} | ignore | {error, Reason :: term()}.
 start_link(Parent, Ref, Handler, Opts) ->
     gen_server:start_link(?MODULE, [Parent, Ref, Handler, Opts], []).
@@ -101,7 +104,7 @@ start_link(Parent, Ref, Handler, Opts) ->
 connect(Pid) ->
     gen_server:cast(Pid, connect).
 
--spec connect(Pid :: pid(), Host :: binary(), Port :: non_neg_integer()) ->
+-spec connect(Pid :: pid(), Host :: list(), Port :: non_neg_integer()) ->
     ok.
 connect(Pid, Host, Port) ->
     gen_server:cast(Pid, {connect, Host, Port}).
@@ -220,8 +223,7 @@ connect_server(Host, Port,
     NewTransport = maps:merge(Transport, #{host => Host,
                                            port => Port}),
     NewState = State#{transport => NewTransport},
-    StrHost = binary_to_list(Host),
-    case transport_connect(StrHost, Port, Options, Timeout, State) of
+    case transport_connect(Host, Port, Options, Timeout, State) of
         {ok, Socket} ->
             handle_status(connect, NewState#{socket@ => Socket});
         {error, Reason} ->
@@ -290,21 +292,22 @@ handle_gen_info(Msg, #{callbacks@ := #{teacup@info := TInfo}} = State) ->
 handle_status(Status, #{callbacks@ := #{teacup@status := TStatus}} = State) ->
     TStatus(Status, State).
 
-transport_connect(Host, Port, Options, Timeout, #{tls := true}) ->
+transport_connect(Host, Port, Options, Timeout,
+                  #{transport := #{tls := true}}) ->
     ssl:connect(Host, Port, Options, Timeout);
 
 transport_connect(Host, Port, Options, Timeout, _State) ->
     gen_tcp:connect(Host, Port, Options, Timeout).
 
 transport_close(#{socket@ := Socket,
-                  tls := true}) ->
+                  transport := #{tls := true}}) ->
     ssl:close(Socket);
 
 transport_close(#{socket@ := Socket}) ->
     gen_tcp:close(Socket).
 
 transport_send(Data, #{socket@ := Socket,
-                       tls := true}) ->
+                       transport := #{tls := true}}) ->
     ssl:send(Socket, Data);
 
 transport_send(Data, #{socket@ := Socket}) ->
