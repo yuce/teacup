@@ -31,12 +31,18 @@
 -module(proxy@teacup).
 -behaviour(teacup_server).
 
--export([teacup@init/1,
+-export([teacup@signature/1,
+         teacup@init/1,
          teacup@status/2,
          teacup@data/2,
          teacup@error/2]).
 
 -define(MSG, ?MODULE).
+
+teacup@signature(#{signature := Signature}) ->
+    {ok, Signature};
+
+teacup@signature(_) -> ok.
 
 teacup@init(Opts) ->
     {ok, Opts}.
@@ -51,7 +57,7 @@ teacup@data(Data, State) ->
 
 teacup@error(Reason, State) ->
     notify_parent({teacup@error, Reason}, State),
-    {error, Reason, State}.
+    {stop, Reason, State}.
 
 notify_parent(Message, #{parent@ := Parent,
                          ref@ := Ref}) ->

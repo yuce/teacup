@@ -54,10 +54,16 @@ new(Handler) ->
 -spec new(atom(), map()) -> {ok, teacup_ref()} | {error, term()}.
 new(Handler, Opts) ->
     Parent = self(),
-    TRef = ?REF(Handler, make_ref()),
-    case teacup_server_sup:start_child(Parent, TRef, Handler, Opts) of
-        {ok, _Pid} -> {ok, TRef};
-        Other -> Other
+    try signature(Handler, Opts) of
+        Signature ->        
+            TRef = ?REF(Signature, make_ref()),
+            case teacup_server_sup:start_child(Parent, TRef, Handler, Opts) of
+                {ok, _Pid} -> {ok, TRef};
+                Other -> Other
+            end
+    catch
+        {signature_error, E} ->
+            {error, E}
     end.
 
 -spec connect(TRef :: teacup_ref()) -> ok.
@@ -94,6 +100,13 @@ pid@(TRef) ->
     teacup_registry:pid(TRef).
 
 %% == Internal
+
+signature(Handler, Opts) ->
+    case Handler:teacup@signature(Opts) of
+        ok -> Handler;
+        {ok, Signature} -> Signature;
+        {error, Reason} -> throw({signature_error, Reason})
+    end.
 
 run_ref(Fun, TRef) ->
     case teacup_registry:pid(TRef) of
