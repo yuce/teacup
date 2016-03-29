@@ -38,9 +38,6 @@
 
 %% == API
 
-% start_link() ->
-%     simpre:start_link({local, ?MODULE}).
-
 update(?REF(Handler, Ref), Pid) ->
     Key = {Handler, Ref},
     true = ets:insert(teacup_registry, {Key, Pid}),
