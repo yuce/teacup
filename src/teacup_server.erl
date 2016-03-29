@@ -65,6 +65,9 @@
 -callback teacup@data(Data :: iodata(), State :: state()) ->
     otp_callback_return().
 
+-callback teacup@signature(Opts :: map()) ->
+    ok | {ok, Signature :: atom()} | {error, Reason :: term()}.
+
 -callback teacup@init(Opts :: map()) ->
     callback_return().
 
