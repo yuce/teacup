@@ -30,8 +30,7 @@
 
 -module(teacup_registry).
 
--export([start_link/0,
-         update/2,
+-export([update/2,
          remove/1,
          pid/1]).
 
@@ -39,14 +38,22 @@
 
 %% == API
 
-start_link() ->
-    simpre:start_link({local, ?MODULE}).
+% start_link() ->
+%     simpre:start_link({local, ?MODULE}).
 
 update(?REF(Handler, Ref), Pid) ->
-    simpre:update({teacup_registry, {Handler, Ref}}, Pid).
+    Key = {Handler, Ref},
+    true = ets:insert(teacup_registry, {Key, Pid}),
+    ok.
 
 remove(?REF(Handler, Ref)) ->
-    simpre:remove({teacup_registry, {Handler, Ref}}).
+    Key = {Handler, Ref},
+    true = ets:delete(teacup_registry, Key),
+    ok.
 
 pid(?REF(Handler, Ref)) ->
-    simpre:pid({teacup_registry, {Handler, Ref}}).
+    Key = {Handler, Ref},
+    case ets:lookup(teacup_registry, Key) of
+        [] -> not_found;
+        [{Key, Pid}] -> {ok, Pid}
+    end.

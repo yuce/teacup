@@ -42,17 +42,11 @@ start_link() ->
 %% == Callbacks
 
 init([]) ->
-    SupSpec = {{rest_for_one, 10, 60}, [registry_spec(),
-                                        teacup_server_sup_spec()]},
+    _ = ets:new(teacup_registry, [named_table,
+                                  public,
+                                  {read_concurrency, true}]),
+    SupSpec = {{rest_for_one, 10, 60}, [teacup_server_sup_spec()]},
     {ok, SupSpec}.
-
-registry_spec() ->
-    #{id => teacup_registry,
-      start => {teacup_registry, start_link, []},
-      restart => permanent,
-      shutdown => 1000,
-      type => worker,
-      modules => [teacup_registry]}.
 
 teacup_server_sup_spec() ->
     #{id => teacup_server_sup,
