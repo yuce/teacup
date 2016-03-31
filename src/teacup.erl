@@ -110,8 +110,6 @@ signature(Handler, Opts) ->
 
 run_ref(Fun, TRef) ->
     case teacup_registry:pid(TRef) of
-        not_found ->
-            {error, not_found};
-        {ok, Pid} ->
-            Fun(Pid)
+        not_found -> {error, not_found};
+        {ok, Pid} -> Fun(Pid)
     end.
