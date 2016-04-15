@@ -43,7 +43,7 @@
 
 -define(REF(Handler, Ref), {teacup@ref, Handler, Ref}).
 
--opaque teacup_ref() :: {teacup@ref, Handler :: atom(), reference()}.
+-type teacup_ref() :: {teacup@ref, Handler :: atom(), reference()}.
 -export_type([teacup_ref/0]).
 
 %% == API
