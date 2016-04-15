@@ -32,24 +32,19 @@
 
 -export([update/2,
          remove/1,
-         pid/1]).
-
--define(REF(Handler, Ref), {teacup@ref, Handler, Ref}).
+         lookup/1]).
 
 %% == API
 
-update(?REF(Handler, Ref), Pid) ->
-    Key = {Handler, Ref},
-    true = ets:insert(teacup_registry, {Key, Pid}),
+update(Key, Value) ->
+    true = ets:insert(teacup_registry, {Key, Value}),
     ok.
 
-remove(?REF(Handler, Ref)) ->
-    Key = {Handler, Ref},
+remove(Key) ->
     true = ets:delete(teacup_registry, Key),
     ok.
 
-pid(?REF(Handler, Ref)) ->
-    Key = {Handler, Ref},
+lookup(Key) ->
     case ets:lookup(teacup_registry, Key) of
         [] -> not_found;
         [{Key, Pid}] -> {ok, Pid}

@@ -95,9 +95,9 @@ call(TRef, Msg) ->
 cast(TRef, Msg) ->
     run_ref(fun(P) -> teacup_server:cast(P, Msg) end, TRef).
 
--spec pid@(TRef :: teacup_ref()) -> {error, not_found} | {ok, pid()}.
+-spec pid@(TRef :: teacup_ref()) -> not_found | {ok, pid()}.
 pid@(TRef) ->
-    teacup_registry:pid(TRef).
+    teacup_registry:lookup(TRef).
 
 %% == Internal
 
@@ -109,7 +109,7 @@ signature(Handler, Opts) ->
     end.
 
 run_ref(Fun, TRef) ->
-    case teacup_registry:pid(TRef) of
+    case teacup_registry:lookup(TRef) of
         not_found -> {error, not_found};
         {ok, Pid} -> Fun(Pid)
     end.

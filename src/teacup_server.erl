@@ -346,7 +346,7 @@ teacup@info(_Message, State) ->
 
 connect_test() ->
     application:start(teacup),
-    {ok, C} = teacup:new(proxy@teacup),
+    {ok, {teacup@ref, proxy@teacup, _} = C} = teacup:new(proxy@teacup),
     teacup:connect(C, <<"httpbin.org">>, 80),
     receive
         {C, {teacup@status, connect}} -> ok
