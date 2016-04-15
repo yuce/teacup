@@ -1,6 +1,6 @@
 {application, teacup,
  [{description, "Simple TCP client library for Erlang"},
-  {vsn, "0.3.4"},
+  {vsn, "0.3.5"},
   {registered, []},
   {mod, {teacup_app, []}},
   {applications,
