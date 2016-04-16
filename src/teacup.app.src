@@ -10,6 +10,6 @@
   {env,[]},
   {modules, []},
   {maintainers, ["Yuce Tekol"]},
-  {licenses, ["MIT"]},
-  {links, [{git, "https://github.com/yuce/teacup.git"}]}
+  {licenses, ["Apache 2.0"]},
+  {links, [{"Github", "https://github.com/yuce/teacup.git"}]}
  ]}.
